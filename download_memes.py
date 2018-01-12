@@ -29,13 +29,13 @@ def get_submissions_yt(subreddit_name, time_filter, num_submission, reddit):
         List with youtube links.
     """
     youtube_links = []
-    # Obtain Subreddit Instance and append youtube_links list.
+    # Obtain Subreddit Instance.
     submissions = reddit.subreddit(subreddit_name)
     submissions = submissions.top(time_filter, limit=num_submission)
 
     for submission in submissions:
         vid_url = submission.url
-        # If url of submission is a youtube.com link
+        # If url of submission is a youtube.com link append the list.
         if "youtube.com" in vid_url:
             youtube_links.append(vid_url)
     print('Successfully colected {} videos from Reddit'.format(len(youtube_links)))
@@ -52,7 +52,7 @@ def download_videos_yt(dir_videos, youtube_links):
         List with youtube links to download.
 
     :return:
-
+        None.
     """
 
     for link in youtube_links:
@@ -77,9 +77,12 @@ def compile_videos(dir_videos, output_name):
 
     :param output_name:
         Name of the output video. Do not include extension of the video.
+
+    :return:
+        None.
     """
 
-    # List videos in a given directory
+    # List videos in a given directory.
     videos = os.listdir(dir_videos)
 
     #  List to append VideoFileClip objects used to create final video.
