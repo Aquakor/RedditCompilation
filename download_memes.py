@@ -28,9 +28,14 @@ def get_submissions_yt(subreddit_name, time_filter, num_submission, reddit):
     :return:
         List with youtube links.
     """
+
+    # Empty list to store youtube links.
     youtube_links = []
+
     # Obtain Subreddit Instance.
     submissions = reddit.subreddit(subreddit_name)
+
+    # Get top posts from Subreddit Instance.
     submissions = submissions.top(time_filter, limit=num_submission)
 
     for submission in submissions:
@@ -38,6 +43,7 @@ def get_submissions_yt(subreddit_name, time_filter, num_submission, reddit):
         # If url of submission is a youtube.com link append the list.
         if "youtube.com" in vid_url:
             youtube_links.append(vid_url)
+
     print('Successfully colected {} videos from Reddit'.format(len(youtube_links)))
     return youtube_links
 
@@ -64,6 +70,7 @@ def download_videos_yt(dir_videos, youtube_links):
         'noplaylist' : True,
         'outtmpl': os.path.join(dir_videos, '%(title)s.%(ext)s')
         }
+
         # Download video
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([link])
