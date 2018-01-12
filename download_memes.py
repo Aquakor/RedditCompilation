@@ -8,32 +8,28 @@ import youtube_dl
 import config
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 
-# Array with youtube links to the videos.
-youtube_links = []
-
-# Number of videos to scrap
-num_videos = 50
-
-# Subreddit name
-subreddit_name = 'youtubehaiku'
-
 def get_submissions_yt(subreddit_name, time_filter, num_submission, reddit):
     """
-    Get array with youtube links from submissions(posts).
+    Get list with youtube links from given subreddit using praw module.
 
-    Args:
-        subreddit_name: Name of subreddit, e.g. 'youtubehaiku'.
-        time_filter: Type to sort top posts, can be: 
-            all, day, hour, month, week, year
-        submission_num: Number of submissions to scrap.
-        reddit: Instance of reddit.
-        
-    Returns:
-        Array with youtube links.
+    :param subreddit_name:
+        Name of subreddit, e.g. 'youtubehaiku'.
 
+    :param time_filter:
+        Type to sort top posts, can be:
+        all, day, hour, month, week, year.
+
+    :param submission_num:
+        Number of submissions to scrap from reddit, e.g. 50.
+
+    :param reddit:
+        Reddit Instance from praw.
+
+    :return:
+        List with youtube links.
     """
     youtube_links = []
-    # Obtain Subreddit Instance and append youtube_links array.
+    # Obtain Subreddit Instance and append youtube_links list.
     submissions = reddit.subreddit(subreddit_name)
     submissions = submissions.top(time_filter, limit=num_submission)
 
@@ -45,31 +41,59 @@ def get_submissions_yt(subreddit_name, time_filter, num_submission, reddit):
     print('Successfully colected {} videos from Reddit'.format(len(youtube_links)))
     return youtube_links
 
-def download_videos_yt(youtube_links):
-    # Attempt to download a video.
+def download_videos_yt(dir_videos, youtube_links):
+    """
+    Download youtube videos from provided list using youtube-dl module.
+
+    :param dir_videos:
+        Path to directory with downloaded videos.
+
+    :param youtube_links:
+        List with youtube links to download.
+
+    :return:
+
+    """
+
     for link in youtube_links:
-        # Attempt to download a meme
+        # ydl_opts is a dictionary used in youtube-dl module.
+        # All options can be found in following link: 
+        # https://github.com/rg3/youtube-dl/blob/master/youtube_dl/YoutubeDL.py#L128-L278
         ydl_opts = {
         'format': 'mp4',
         'noplaylist' : True,
-        'outtmpl': './videos/%(title)s.%(ext)s'
+        'outtmpl': os.path.join(dir_videos, '%(title)s.%(ext)s')
         }
+        # Download video
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([link])
 
 def compile_videos(dir_videos, output_name):
+    """
+    Compile videos  using concatenate method from movie-py module.
+
+    :param dir_videos:
+        Path to directory with downloaded videos.
+
+    :param output_name:
+        Name of the output video. Do not include extension of the video.
+    """
+
     # List videos in a given directory
     videos = os.listdir(dir_videos)
 
-    #  Array with VideoFileClip objects used to craete final video.
+    #  List to append VideoFileClip objects used to create final video.
     clips = []
 
-    # Attempt to append clips array with files of format *.mp4s and height of 720
+    # Attempt to append clips with files of format *.mp4s.
     for video in videos:
         if video.endswith('.mp4'):
             video = os.path.join(dir_videos, video)
             vid = cv2.VideoCapture(video)
             height = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            # Skip any videos that has height lower then 500px, otherwise
+            # the final video looks scuffed. You can lower this threshold
+            # in order to increase the number of videos in final video.
             if height >= 500:
                 clips.append(VideoFileClip(video))
                 print('{} has height >= 500px.'.format(video))
@@ -84,10 +108,19 @@ def compile_videos(dir_videos, output_name):
 
 
 if __name__ == "__main__":
-    print("Obtaining reddit instance...")
+
+    # Obtain Reddit Instance.
     reddit = praw.Reddit(client_id=config.client_id,
                      client_secret=config.client_secret,
                      user_agent=config.user_agent)
-    yt_links = get_submissions_yt('youtubehaiku', 'day', 5, reddit)
-    download_videos_yt(yt_links)
-    compile_videos('./videos/', 'haikus_12_01')
+
+    subreddit = 'youtubehaiku'
+    time_filter = 'day'
+    num_submission = 5
+
+    dir_videos = './videos/'
+    output_name = 'haikus_12.01'
+
+    yt_links = get_submissions_yt(subreddit, time_filter, num_submission, reddit)
+    download_videos_yt(dir_videos, yt_links)
+    compile_videos(dir_videos, output_name)
