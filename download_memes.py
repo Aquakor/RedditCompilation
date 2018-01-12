@@ -17,7 +17,7 @@ num_videos = 50
 # Subreddit name
 subreddit_name = 'youtubehaiku'
 
-def get_submissions_yt(subreddit_name, time_filter, num_submission):
+def get_submissions_yt(subreddit_name, time_filter, num_submission, reddit):
     """
     Get array with youtube links from submissions(posts).
 
@@ -26,6 +26,7 @@ def get_submissions_yt(subreddit_name, time_filter, num_submission):
         time_filter: Type to sort top posts, can be: 
             all, day, hour, month, week, year
         submission_num: Number of submissions to scrap.
+        reddit: Instance of reddit.
         
     Returns:
         Array with youtube links.
@@ -87,6 +88,6 @@ if __name__ == "__main__":
     reddit = praw.Reddit(client_id=config.client_id,
                      client_secret=config.client_secret,
                      user_agent=config.user_agent)
-    yt_links = get_submissions_yt('youtubehaiku', 'day', 5)
+    yt_links = get_submissions_yt('youtubehaiku', 'day', 5, reddit)
     download_videos_yt(yt_links)
     compile_videos('./videos/', 'haikus_12_01')
