@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+import urllib.request
 import os
 import sys
 
@@ -8,7 +9,7 @@ import youtube_dl
 import config
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 
-def get_submissions_yt(subreddit_name, time_filter, num_submission, reddit):
+def get_submissions(subreddit_name, time_filter, num_submission, reddit):
     """
     Get list with youtube links from given subreddit using praw module.
 
@@ -26,11 +27,11 @@ def get_submissions_yt(subreddit_name, time_filter, num_submission, reddit):
         Reddit Instance from praw.
 
     :return:
-        List with youtube links.
+        List with youtube links and list with twitch links.
     """
 
-    # Empty list to store youtube links.
-    youtube_links = []
+    # Empty list to store links.
+    links = []
 
     # Obtain Subreddit Instance.
     submissions = reddit.subreddit(subreddit_name)
@@ -42,38 +43,91 @@ def get_submissions_yt(subreddit_name, time_filter, num_submission, reddit):
         vid_url = submission.url
         # If url of submission is a youtube.com link append the list.
         if "youtube.com" in vid_url:
-            youtube_links.append(vid_url)
+            links.append(vid_url)
+        elif "twitch.tv" in vid_url:
+            twitch_link = get_twitch_mp4_url(vid_url)
+            links.append(twitch_link)
 
-    print('Successfully colected {} videos from Reddit'.format(len(youtube_links)))
-    return youtube_links
 
-def download_videos_yt(dir_videos, youtube_links):
+    print('Successfully colected {} videos from Reddit'.format(len(links)))
+    return links
+
+def get_twitch_mp4_url(url):
+    """
+    Finds url to .mp4 file in .html in the clips.twitch.tv link.
+    We could retrieve the .mp4 link using Twitch API, but it will 
+    eventually be removed on 12/31/18 so I use this method inspired
+    by https://github.com/GeordieP/clip-downloader/blob/master/tcd.py.
+    The method in link is actually outdated because .html page changes
+    overtime so this method should last longer.
+
+    :param url:
+    Url to twitch clip.
+
+    :returns:
+    Clip link with .mp4 format.
+    """
+
+    # Read the conent of the page.
+    html = str(urllib.request.urlopen(url).read())
+
+    # Start and end of the link to .mp4 clip.
+    start_url = "https://"
+    end_url = ".mp4"
+
+    # Split html string.
+    html = html.split()
+
+    # Search for mp4 link in every line.
+    for line in html:
+        if '.mp4' in line:
+            id_start = line.find(start_url)
+            id_end = line.find(end_url)
+            mp4url = line[id_start:id_end+4]
+            return mp4url
+
+def download_videos(dir_videos, links):
     """
     Download youtube videos from provided list using youtube-dl module.
 
     :param dir_videos:
         Path to directory with downloaded videos.
 
-    :param youtube_links:
+    :param links:
         List with youtube links to download.
 
     :return:
         None.
     """
 
-    for link in youtube_links:
-        # ydl_opts is a dictionary used in youtube-dl module.
-        # All options can be found in following link: 
-        # https://github.com/rg3/youtube-dl/blob/master/youtube_dl/YoutubeDL.py#L128-L278
-        ydl_opts = {
-        'format': 'mp4',
-        'noplaylist' : True,
-        'outtmpl': os.path.join(dir_videos, '%(title)s.%(ext)s')
-        }
+    # ydl_opts is a dictionary used in youtube-dl module.
+    # All options can be found in following link: 
+    # https://github.com/rg3/youtube-dl/blob/master/youtube_dl/YoutubeDL.py#L128-L278
+    ydl_opts = {
+    'format': 'mp4',
+    'noplaylist' : True,
+    'outtmpl': os.path.join(dir_videos, '%(title)s.%(ext)s')
+    }
 
-        # Download video
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([link])
+    for link in links:
+        if "youtube.com" in link:
+            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([link])
+        elif "twitch.tv" in link:
+            # Extract unique id of clip to get unique file name.
+            # The file_name should be something like 12345.mp4.
+            file_name = link.split('/')
+            file_name = file_name[len(file_name)-1]
+
+            # Output path to video.
+            output_path = os.path.join(dir_videos, file_name)
+
+            # Download the .mp4 file.
+            try:
+                urllib.request.urlretrieve(link, output_path)
+                print("File {} successfully downloaded.".format(file_name))
+            except:
+                print("Could not download {} file from twitch.tv".format(file_name))
 
 def compile_videos(dir_videos, output_name):
     """
@@ -124,13 +178,15 @@ if __name__ == "__main__":
                      client_secret=config.client_secret,
                      user_agent=config.user_agent)
 
-    subreddit = 'youtubehaiku'
+    subreddit = 'livestreamfail'
     time_filter = 'day'
     num_submission = 5
 
     dir_videos = './videos/'
     output_name = 'haikus_12.01'
 
-    yt_links = get_submissions_yt(subreddit, time_filter, num_submission, reddit)
-    download_videos_yt(dir_videos, yt_links)
+    links = get_submissions(subreddit, time_filter, num_submission, reddit)
+
+    print(links)
+    download_videos(dir_videos, links)
     compile_videos(dir_videos, output_name)
