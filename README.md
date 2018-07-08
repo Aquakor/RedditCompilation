@@ -1,4 +1,4 @@
-# Reddit Compilation
+# Youtube Compilation
 Download youtube videos from reddit and create a single video from them.
 ### Prerequisities
 ```
